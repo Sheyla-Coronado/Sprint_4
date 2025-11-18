@@ -252,4 +252,200 @@ public class SOS_Test {
 
         assertTrue(game.getWinner() != null || game.isDraw(), "When board is full, there should be a winner or a draw");
     }
+
+    // AC for computer
+    
+    @Test
+    @DisplayName("AC 8.1 - Computer Player Type Verification")
+    void testPlayerTypeVerification() {
+        SOSGame.Player humanBlue = new SOSGame.HumanPlayer("Blue");
+        SOSGame.Player computerRed = new SOSGame.ComputerPlayer("Red");
+        
+        SimpleSOSGame game = new SimpleSOSGame(3, humanBlue, computerRed);
+        
+        // Verify player types
+        assertFalse(game.getCurrentPlayer() instanceof SOSGame.ComputerPlayer, 
+            "First player (Blue) should be human");
+        
+        game.switchPlayer();
+        assertTrue(game.getCurrentPlayer() instanceof SOSGame.ComputerPlayer, 
+            "Second player (Red) should be computer");
+    }
+
+    private int countEmptyCells(SOSGameBase game) {
+        int count = 0;
+        char[][] board = game.getBoard();
+        for (int i = 0; i < game.getBoardSize(); i++) {
+            for (int j = 0; j < game.getBoardSize(); j++) {
+                if (board[i][j] == ' ') {
+                    count++;
+                }
+            }
+        }
+        return count;
+    }
+
+    @Test
+    @DisplayName("AC 8.1 - Select Computer Opponent Option Available")
+    void testComputerOpponentSelectionAvailable() {
+        SOSGame.Player blueComputer = new SOSGame.ComputerPlayer("Blue");
+        SOSGame.Player redComputer = new SOSGame.ComputerPlayer("Red");
+
+        assertNotNull(blueComputer, "Blue computer player should be created");
+        assertNotNull(redComputer, "Red computer player should be created");
+        assertTrue(blueComputer instanceof SOSGame.ComputerPlayer, "Blue should be instance of ComputerPlayer");
+        assertTrue(redComputer instanceof SOSGame.ComputerPlayer, "Red should be instance of ComputerPlayer");
+        assertEquals("Blue", blueComputer.getName(), "Computer player should have correct name");
+        assertEquals("Red", redComputer.getName(), "Computer player should have correct name");
+    }
+
+    @Test
+    @DisplayName("AC 8.2 - Computer Makes Valid Moves in Simple Mode")
+    void testComputerMakesValidMovesSimpleMode() {
+        SOSGame.Player human = new SOSGame.HumanPlayer("Blue");
+        SOSGame.Player computer = new SOSGame.ComputerPlayer("Red");
+        SimpleSOSGame game = new SimpleSOSGame(3, human, computer);
+
+        // Human make first move
+        human.makeMove(game, 0, 0, 'S');
+        game.switchPlayer();
+
+        // Computer's turn, should make a valid move
+        int emptyBefore = countEmptyCells(game);
+        boolean moveMade = computer.makeMove(game, -1, -1, ' '); 
+
+        assertTrue(moveMade, "Computer should successfully make a move");
+        int emptyAfter = countEmptyCells(game);
+        assertEquals(emptyBefore - 1, emptyAfter, "Computer should fill exactly one cell");
+
+        boolean foundNewMove = false;
+        for (int r = 0; r < game.getBoardSize(); r++) {
+            for (int c = 0; c < game.getBoardSize(); c++) {
+                if (game.getBoard()[r][c] != ' ' && !(r == 0 && c == 0)) {
+                    char letter = game.getBoard()[r][c];
+                    assertTrue(letter == 'S' || letter == 'O', "Computer should place valid letter");
+                    foundNewMove = true;
+                }
+            }
+        }
+        assertTrue(foundNewMove, "Computer should have placed a letter on the board");
+    }
+
+    @Test
+    @DisplayName("AC 8.2 - Computer Makes Valid Moves in General Mode")
+    void testComputerMakesValidMovesGeneralMode() {
+        SOSGame.Player human = new SOSGame.HumanPlayer("Blue");
+        SOSGame.Player computer = new SOSGame.ComputerPlayer("Red");
+        GeneralSOSGame game = new GeneralSOSGame(4, human, computer);
+
+        // Human makes first move
+        human.makeMove(game, 1, 1, 'O');
+        game.switchPlayer();
+
+        // Computer makes move
+        int emptyBefore = countEmptyCells(game);
+        computer.makeMove(game, -1, -1, ' ');
+        int emptyAfter = countEmptyCells(game);
+
+        assertEquals(emptyBefore - 1, emptyAfter, "Computer should fill exactly one cell");
+        
+        int filledCells = 0;
+        for (int r = 0; r < game.getBoardSize(); r++) {
+            for (int c = 0; c < game.getBoardSize(); c++) {
+                if (game.getBoard()[r][c] != ' ') {
+                    filledCells++;
+                    char letter = game.getBoard()[r][c];
+                    assertTrue(letter == 'S' || letter == 'O', "Should be valid letter");
+                }
+            }
+        }
+        assertEquals(2, filledCells, "Should have exactly 2 filled cells after both moves");
+    }
+
+    @Test
+    @DisplayName("AC 8.3 - Computer vs Computer in Simple Mode")
+    void testComputerVsComputerSimpleMode() {
+        SOSGame.Player blueComputer = new SOSGame.ComputerPlayer("Blue");
+        SOSGame.Player redComputer = new SOSGame.ComputerPlayer("Red");
+        SimpleSOSGame game = new SimpleSOSGame(3, blueComputer, redComputer);
+
+        assertTrue(blueComputer instanceof SOSGame.ComputerPlayer, "Blue should be computer");
+        assertTrue(redComputer instanceof SOSGame.ComputerPlayer, "Red should be computer");
+
+        int maxMoves = game.getBoardSize() * game.getBoardSize();
+        int moveCount = 0;
+
+        while (game.getWinner() == null && moveCount < maxMoves) {
+            SOSGame.Player current = game.getCurrentPlayer();
+            int emptyBefore = countEmptyCells(game);
+            
+            boolean moveMade = current.makeMove(game, -1, -1, ' ');
+            assertTrue(moveMade, "Computer should make valid move on turn " + (moveCount + 1));
+            
+            int emptyAfter = countEmptyCells(game);
+            assertEquals(emptyBefore - 1, emptyAfter, "Exactly one cell should be filled");
+
+            game.checkForNewSOS();
+            
+            if (game.getWinner() != null) {
+                break;
+            }
+            
+            game.switchPlayer();
+            moveCount++;
+        }
+
+        assertTrue(moveCount > 0, "At least one move should have been made");
+        assertTrue(moveCount <= maxMoves, "Should not exceed board capacity");
+
+        for (int r = 0; r < game.getBoardSize(); r++) {
+            for (int c = 0; c < game.getBoardSize(); c++) {
+                char cell = game.getBoard()[r][c];
+                assertTrue(cell == ' ' || cell == 'S' || cell == 'O', 
+                    "Board should only contain valid characters");
+            }
+        }
+    }
+
+    @Test
+    @DisplayName("AC 8.3 - Computer vs Computer in General Mode")
+    void testComputerVsComputerGeneralMode() {
+        SOSGame.Player blueComputer = new SOSGame.ComputerPlayer("Blue");
+        SOSGame.Player redComputer = new SOSGame.ComputerPlayer("Red");
+        GeneralSOSGame game = new GeneralSOSGame(3, blueComputer, redComputer);
+
+        assertTrue(blueComputer instanceof SOSGame.ComputerPlayer, "Blue should be computer");
+        assertTrue(redComputer instanceof SOSGame.ComputerPlayer, "Red should be computer");
+
+        int maxMoves = game.getBoardSize() * game.getBoardSize();
+        int moveCount = 0;
+
+        while (countEmptyCells(game) > 0 && moveCount < maxMoves) {
+            SOSGame.Player current = game.getCurrentPlayer();
+            int emptyBefore = countEmptyCells(game);
+            
+            boolean moveMade = current.makeMove(game, -1, -1, ' ');
+            assertTrue(moveMade, "Computer should make valid move");
+            
+            int emptyAfter = countEmptyCells(game);
+            assertEquals(emptyBefore - 1, emptyAfter, "One cell should be filled per move");
+
+            int sosFound = game.checkForNewSOS();
+
+            if (sosFound == 0) {
+                game.switchPlayer();
+            }
+            
+            moveCount++;
+        }
+        
+        assertEquals(0, countEmptyCells(game), "Board should be completely filled");
+
+        game.checkGameStatus();
+        assertTrue(game.getWinner() != null || game.isDraw(), 
+            "Game should have winner or draw when board is full");
+
+        int totalScore = game.getBlueScore() + game.getRedScore();
+        assertTrue(totalScore >= 0, "Total score should be non-negative");
+    }
 }
