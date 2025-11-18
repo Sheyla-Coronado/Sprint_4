@@ -17,6 +17,12 @@ public class SOS_GUI extends JFrame {
     private JLabel blueScoreLabel;
     private JLabel redScoreLabel;
 
+    // Added for setup screen
+    private JRadioButton blueHumanButton;
+    private JRadioButton blueComputerButton;
+    private JRadioButton redHumanButton;
+    private JRadioButton redComputerButton;
+
     private char selectedLetter = ' ';
 
     public SOS_GUI() {
@@ -28,13 +34,13 @@ public class SOS_GUI extends JFrame {
 
         showSetupScreen();
     }
-    
+
     private void showSetupScreen() {
-    	setupPanel = createSetupPanel();
-    	setContentPane(setupPanel);
-    	setVisible(true);
+        setupPanel = createSetupPanel();
+        setContentPane(setupPanel);
+        setVisible(true);
     }
-    
+
     private JPanel createSetupPanel() {
         JPanel panel = new JPanel(new GridBagLayout());
         panel.setBackground(new Color(240, 240, 240));
@@ -49,11 +55,12 @@ public class SOS_GUI extends JFrame {
 
         addBoardSizeSelector(panel, gbc);
         addGameModeSelector(panel, gbc);
+        addPlayerTypeSelectors(panel, gbc); // <<< new
         addStartButton(panel, gbc);
 
         return panel;
     }
-    
+
     private void addBoardSizeSelector(JPanel panel, GridBagConstraints gbc) {
         JLabel boardSizeLabel = new JLabel("Choose Board Size:");
         boardSizeLabel.setFont(new Font("Arial", Font.BOLD, 14));
@@ -66,7 +73,7 @@ public class SOS_GUI extends JFrame {
         gbc.gridx = 1; gbc.gridy = 1;
         panel.add(boardSizeCombo, gbc);
     }
-    
+
     private void addGameModeSelector(JPanel panel, GridBagConstraints gbc) {
         JLabel gameModeLabel = new JLabel("Choose Game Mode:");
         gameModeLabel.setFont(new Font("Arial", Font.BOLD, 14));
@@ -78,7 +85,46 @@ public class SOS_GUI extends JFrame {
         gbc.gridx = 1; gbc.gridy = 2;
         panel.add(gameModeCombo, gbc);
     }
-    
+
+    // NEW: Player type selection for setup screen
+    private void addPlayerTypeSelectors(JPanel panel, GridBagConstraints gbc) {
+        // Blue player
+        JLabel blueLabel = new JLabel("Blue player:");
+        blueLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        gbc.gridx = 0; gbc.gridy = 3;
+        panel.add(blueLabel, gbc);
+
+        blueHumanButton = new JRadioButton("Human", true);
+        blueComputerButton = new JRadioButton("Computer");
+        ButtonGroup blueGroup = new ButtonGroup();
+        blueGroup.add(blueHumanButton);
+        blueGroup.add(blueComputerButton);
+
+        JPanel bluePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        bluePanel.add(blueHumanButton);
+        bluePanel.add(blueComputerButton);
+        gbc.gridx = 1; gbc.gridy = 3;
+        panel.add(bluePanel, gbc);
+
+        // Red player
+        JLabel redLabel = new JLabel("Red player:");
+        redLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        gbc.gridx = 0; gbc.gridy = 4;
+        panel.add(redLabel, gbc);
+
+        redHumanButton = new JRadioButton("Human", true);
+        redComputerButton = new JRadioButton("Computer");
+        ButtonGroup redGroup = new ButtonGroup();
+        redGroup.add(redHumanButton);
+        redGroup.add(redComputerButton);
+
+        JPanel redPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        redPanel.add(redHumanButton);
+        redPanel.add(redComputerButton);
+        gbc.gridx = 1; gbc.gridy = 4;
+        panel.add(redPanel, gbc);
+    }
+
     private void addStartButton(JPanel panel, GridBagConstraints gbc) {
         startGameButton = new JButton("Start Game");
         startGameButton.setFont(new Font("Arial", Font.BOLD, 14));
@@ -88,15 +134,18 @@ public class SOS_GUI extends JFrame {
             String mode = ((String) gameModeCombo.getSelectedItem()).toLowerCase();
             startGame(size, mode);
         });
-        gbc.gridx = 0; gbc.gridy = 3; gbc.gridwidth = 2;
+        gbc.gridx = 0; gbc.gridy = 5; gbc.gridwidth = 2;
         panel.add(startGameButton, gbc);
     }
-    
-
 
     private void startGame(int boardSize, String gameMode) {
-        SOSGame.Player player1 = new SOSGame.HumanPlayer("Blue");
-        SOSGame.Player player2 = new SOSGame.HumanPlayer("Red");
+        SOSGame.Player player1 = blueComputerButton.isSelected()
+                ? new SOSGame.ComputerPlayer("Blue")
+                : new SOSGame.HumanPlayer("Blue");
+
+        SOSGame.Player player2 = redComputerButton.isSelected()
+                ? new SOSGame.ComputerPlayer("Red")
+                : new SOSGame.HumanPlayer("Red");
 
         if (gameMode.equals("simple")) {
             gameLogic = new SimpleSOSGame(boardSize, player1, player2);
@@ -105,8 +154,66 @@ public class SOS_GUI extends JFrame {
         }
 
         showGameScreen();
+
+        // If first player is computer, move automatically
+        if (gameLogic.getCurrentPlayer() instanceof SOSGame.ComputerPlayer) {
+            makeComputerMove();
+        }
+    }
+    
+    private void makeComputerMove() {
+        setButtonsEnabled(false);
+
+        Timer timer = new Timer(500, e -> {
+            SOSGame.ComputerPlayer computer = (SOSGame.ComputerPlayer) gameLogic.getCurrentPlayer();
+            SOSGame.ComputerPlayer.Move move = computer.computeBestMove(gameLogic);
+
+            if (move != null) {
+                gameLogic.getBoard()[move.row][move.col] = move.letter;
+                boardButtons[move.row][move.col].setText(String.valueOf(move.letter));
+                boardButtons[move.row][move.col].setForeground(
+                        computer.getName().equals("Blue") ? Color.BLUE : Color.RED);
+                boardButtons[move.row][move.col].setEnabled(false);
+
+                int newSOS = gameLogic.checkForNewSOS();
+                updateScores();
+                boardPanel.repaint();
+
+                // Check if game ended
+                if (checkEndGame()) return;  // stop immediately if winner/draw
+
+                // In general mode, if SOS was formed, computer goes again
+                if (gameLogic.getGameMode().equals("general") && newSOS > 0) {
+                    currentTurnLabel.setText("Current turn: " + computer.getName() + " (again!)");
+                    makeComputerMove(); // recursively move again
+                } else {
+                    gameLogic.switchPlayer();
+                    currentTurnLabel.setText("Current turn: " + gameLogic.getCurrentPlayer().getName());
+
+                    if (gameLogic.getCurrentPlayer() instanceof SOSGame.ComputerPlayer) {
+                        makeComputerMove(); // next computer turn
+                    } else {
+                        setButtonsEnabled(true);
+                    }
+                }
+            } else {
+                setButtonsEnabled(true);
+            }
+        });
+        timer.setRepeats(false);
+        timer.start();
     }
 
+    private void setButtonsEnabled(boolean enabled) {
+        for (int i = 0; i < boardButtons.length; i++) {
+            for (int j = 0; j < boardButtons[i].length; j++) {
+                if (gameLogic.getBoard()[i][j] == ' ') {
+                    boardButtons[i][j].setEnabled(enabled);
+                }
+            }
+        }
+    }
+    
     private void showGameScreen() {
         gamePanel = new JPanel(new BorderLayout(10, 10));
         gamePanel.setBackground(new Color(240, 240, 240));
@@ -323,13 +430,24 @@ public class SOS_GUI extends JFrame {
         updateScores();
         boardPanel.updateLines();
 
-        if (!checkEndGame()) {
+        // Check if game ended
+        if (checkEndGame()) return;
+
+        // In General mode, if SOS was formed, same player goes again
+        if (gameLogic.getGameMode().equals("general") && newSOS > 0) {
+            currentTurnLabel.setText("Current turn: " + gameLogic.getCurrentPlayer().getName() + " (again!)");
+        } else {
             gameLogic.switchPlayer();
             currentTurnLabel.setText("Current turn: " + gameLogic.getCurrentPlayer().getName());
         }
 
         selectedLetter = ' ';
         disableLetterButtons();
+
+        // Immediately let computer move if it’s now the computer's turn
+        if (gameLogic.getCurrentPlayer() instanceof SOSGame.ComputerPlayer) {
+            makeComputerMove();
+        }
     }
 
     private void disableLetterButtons() {

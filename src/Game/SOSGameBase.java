@@ -7,8 +7,8 @@ public abstract class SOSGameBase {
 
     protected int boardSize;
     protected char[][] board;
-    protected SOSGame.Player player1;
-    protected SOSGame.Player player2;
+    protected SOSGame.Player bluePlayer;
+    protected SOSGame.Player redPlayer;
     protected SOSGame.Player currentPlayer;
 
     protected String winner = null;
@@ -20,15 +20,13 @@ public abstract class SOSGameBase {
     protected String gameMode;
 
     protected static final char EMPTY = ' ';
-
     protected List<SOSGame.SOSLine> sosLines = new ArrayList<>();
 
-
-    public SOSGameBase(int boardSize, SOSGame.Player p1, SOSGame.Player p2, String mode) {
+    public SOSGameBase(int boardSize, SOSGame.Player bluePlayer, SOSGame.Player redPlayer, String mode) {
         this.boardSize = boardSize;
-        this.player1 = p1;
-        this.player2 = p2;
-        this.currentPlayer = player1;
+        this.bluePlayer = bluePlayer;
+        this.redPlayer = redPlayer;
+        this.currentPlayer = bluePlayer;
         this.gameMode = mode;
         this.board = new char[boardSize][boardSize];
         initializeBoard();
@@ -41,36 +39,38 @@ public abstract class SOSGameBase {
     }
 
     public int getBoardSize() { return boardSize; }
-
     public char[][] getBoard() { return board; }
-
     public SOSGame.Player getCurrentPlayer() { return currentPlayer; }
-
-    public void switchPlayer() {
-        currentPlayer = (currentPlayer == player1) ? player2 : player1;
-    }
-
     public List<SOSGame.SOSLine> getSOSLines() { return sosLines; }
-
     public String getGameMode() { return gameMode; }
 
+    public void switchPlayer() {
+        currentPlayer = (currentPlayer == bluePlayer) ? redPlayer : bluePlayer;
+    }
+
+    public SOSGame.Player getPlayer(String color) {
+        return color.equals("Blue") ? bluePlayer : redPlayer;
+    }
+
+    public void setPlayerType(String color, boolean isComputer) {
+        if (color.equals("Blue")) {
+            bluePlayer = isComputer ? new SOSGame.ComputerPlayer("Blue") : new SOSGame.HumanPlayer("Blue");
+        } else {
+            redPlayer = isComputer ? new SOSGame.ComputerPlayer("Red") : new SOSGame.HumanPlayer("Red");
+        }
+        // Ensure currentPlayer always points to one of these
+        if (currentPlayer.getName().equals(color)) currentPlayer = getPlayer(color);
+    }
+
     public abstract int checkForNewSOS();
-
-    public abstract void checkGameStatus();
-
     public abstract String getWinner();
-
     public abstract boolean isDraw();
-
     public abstract int getBlueScore();
-
     public abstract int getRedScore();
-
 
     // Count new SOS patterns
     protected int countNewSOS(SOSGame.Player player) {
         int count = 0;
-
         int[][] dirs = {
             {0, 1},   // horizontal
             {1, 0},   // vertical
@@ -88,7 +88,7 @@ public abstract class SOSGameBase {
 
                     if (inBounds(r3, c3)) {
                         if (board[r][c] == 'S' && board[r2][c2] == 'O' && board[r3][c3] == 'S') {
-                            // Check if line already exists
+                        	// Check if line already exists
                             boolean exists = false;
                             for (SOSGame.SOSLine line : sosLines) {
                                 if ((line.startRow == r && line.startCol == c &&
@@ -110,6 +110,31 @@ public abstract class SOSGameBase {
         }
 
         return count;
+    }
+   
+    public void checkGameStatus() {
+        boolean boardFull = true;
+        for (int i = 0; i < boardSize; i++) {
+            for (int j = 0; j < boardSize; j++) {
+                if (board[i][j] == EMPTY) {
+                    boardFull = false;
+                    break;
+                }
+            }
+            if (!boardFull) break;
+        }
+        
+        if (boardFull) {
+            if (gameMode.equals("general")) {
+                if (blueScore > redScore) {
+                    winner = "Blue";
+                } else if (redScore > blueScore) {
+                    winner = "Red";
+                } else {
+                    draw = true;
+                }
+            }
+        }
     }
 
     private boolean inBounds(int r, int c) {
