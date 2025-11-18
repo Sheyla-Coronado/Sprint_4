@@ -8,7 +8,7 @@ public class SOSGame {
 
     public static class SOSLine {
         public final int startRow, startCol, endRow, endCol;
-        public final String player;
+        public final String player; // "Blue" or "Red"
 
         public SOSLine(int startRow, int startCol, int endRow, int endCol, String player) {
             this.startRow = startRow;
@@ -88,6 +88,7 @@ public class SOSGame {
             return bestMove;
         }
 
+        // Minimax algol w/ alpha-beta pruning
         private int minimax(SOSGameBase game, int depth, int alpha, int beta, boolean isMaximizing) {
  
             if (depth == 0 || isGameOver(game)) {

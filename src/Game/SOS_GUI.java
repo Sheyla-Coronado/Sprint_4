@@ -16,8 +16,6 @@ public class SOS_GUI extends JFrame {
     private JButton startGameButton;
     private JLabel blueScoreLabel;
     private JLabel redScoreLabel;
-
-    // Added for setup screen
     private JRadioButton blueHumanButton;
     private JRadioButton blueComputerButton;
     private JRadioButton redHumanButton;
@@ -55,7 +53,7 @@ public class SOS_GUI extends JFrame {
 
         addBoardSizeSelector(panel, gbc);
         addGameModeSelector(panel, gbc);
-        addPlayerTypeSelectors(panel, gbc); // <<< new
+        addPlayerTypeSelectors(panel, gbc); 
         addStartButton(panel, gbc);
 
         return panel;
@@ -86,9 +84,7 @@ public class SOS_GUI extends JFrame {
         panel.add(gameModeCombo, gbc);
     }
 
-    // NEW: Player type selection for setup screen
     private void addPlayerTypeSelectors(JPanel panel, GridBagConstraints gbc) {
-        // Blue player
         JLabel blueLabel = new JLabel("Blue player:");
         blueLabel.setFont(new Font("Arial", Font.BOLD, 14));
         gbc.gridx = 0; gbc.gridy = 3;
@@ -106,7 +102,6 @@ public class SOS_GUI extends JFrame {
         gbc.gridx = 1; gbc.gridy = 3;
         panel.add(bluePanel, gbc);
 
-        // Red player
         JLabel redLabel = new JLabel("Red player:");
         redLabel.setFont(new Font("Arial", Font.BOLD, 14));
         gbc.gridx = 0; gbc.gridy = 4;
@@ -155,7 +150,6 @@ public class SOS_GUI extends JFrame {
 
         showGameScreen();
 
-        // If first player is computer, move automatically
         if (gameLogic.getCurrentPlayer() instanceof SOSGame.ComputerPlayer) {
             makeComputerMove();
         }
@@ -179,19 +173,17 @@ public class SOS_GUI extends JFrame {
                 updateScores();
                 boardPanel.repaint();
 
-                // Check if game ended
-                if (checkEndGame()) return;  // stop immediately if winner/draw
+                if (checkEndGame()) return; 
 
-                // In general mode, if SOS was formed, computer goes again
                 if (gameLogic.getGameMode().equals("general") && newSOS > 0) {
                     currentTurnLabel.setText("Current turn: " + computer.getName() + " (again!)");
-                    makeComputerMove(); // recursively move again
+                    makeComputerMove(); 
                 } else {
                     gameLogic.switchPlayer();
                     currentTurnLabel.setText("Current turn: " + gameLogic.getCurrentPlayer().getName());
 
                     if (gameLogic.getCurrentPlayer() instanceof SOSGame.ComputerPlayer) {
-                        makeComputerMove(); // next computer turn
+                        makeComputerMove(); 
                     } else {
                         setButtonsEnabled(true);
                     }
@@ -430,10 +422,8 @@ public class SOS_GUI extends JFrame {
         updateScores();
         boardPanel.updateLines();
 
-        // Check if game ended
         if (checkEndGame()) return;
 
-        // In General mode, if SOS was formed, same player goes again
         if (gameLogic.getGameMode().equals("general") && newSOS > 0) {
             currentTurnLabel.setText("Current turn: " + gameLogic.getCurrentPlayer().getName() + " (again!)");
         } else {
@@ -444,7 +434,6 @@ public class SOS_GUI extends JFrame {
         selectedLetter = ' ';
         disableLetterButtons();
 
-        // Immediately let computer move if it’s now the computer's turn
         if (gameLogic.getCurrentPlayer() instanceof SOSGame.ComputerPlayer) {
             makeComputerMove();
         }
